@@ -1,32 +1,50 @@
-# bare-metal-practice
+# Bare-Metal Practice
 
-Practicing bare metal concepts
+Practicing bare-metal concepts.
 
-Development Board used: Arduino Uno
+## Development Board Used
+**Arduino Uno**
 
 ## Libraries Required
-avr-libc
-avrdude 
-binutils-avr 
-gcc-avr
 
-On mac-os can be installed using `brew`
+- **avr-libc**
+- **avrdude**
+- **binutils-avr**
+- **gcc-avr**
 
-## Building the examples
+On macOS, these can be installed using Homebrew:
+```sh
+brew install avr-libc avrdude binutils-avr gcc-avr
+```
 
-From the main project directory i.e `bare-metal-practice` use the following `make` commands
-replacing [example-name] with the example to build e.g: blinky-with-interrupt
+## Building the Examples
 
-```make build PROJECT=[project-name]```
-This command will build the image to be flashed
+From the main project directory (`bare-metal-practice`), use the following `make` commands, replacing `[project-name]` with the actual project name (e.g., `blinky-with-interrupt`).
 
-```make upload PROJECT=[project-name]```
-This command will build and flash the Arduino but make sure to change the port in `Makefile` that Arduino is connected to
+### **Build the Image**
+This command builds the image to be flashed:
+```sh
+make build PROJECT=[project-name]
+```
 
-```make clean PROJECT=[project-name]```
-This command cleans the build files for the selected example
+### **Upload to Arduino**
+This command builds and flashes the Arduino.  
+**Ensure you update the correct port in the `Makefile`** where the Arduino is connected.
+```sh
+make upload PROJECT=[project-name]
+```
 
-## Practice Projects Examples
+### **Clean Build Files**
+This command removes the build files for the selected example:
+```sh
+make clean PROJECT=[project-name]
+```
 
-    - blinky: forever blinking LED
-    - blinky-with-interrupt: blinking an LED without a forever while loop and using interrupts
+---
+
+## **Practice Project Examples**
+
+- **blinky**: Forever blinking LED  
+- **blinky-with-interrupt**: Blinking an LED without a forever while loop, using interrupts
+
+---
