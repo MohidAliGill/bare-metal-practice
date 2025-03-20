@@ -1,1 +1,3 @@
-# bare-metal-practive
+# bare-metal-practice
+
+Practicing bare metal concepts
