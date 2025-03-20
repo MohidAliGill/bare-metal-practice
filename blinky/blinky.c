@@ -10,6 +10,8 @@
 #define SYSTICK_LOAD    (*(volatile uint32_t *)(SYSTICK_BASE + 0x04))
 #define SYSTICK_VAL     (*(volatile uint32_t *)(SYSTICK_BASE + 0x08))
 
+#define __WFI() __asm volatile ("wfi")
+
 volatile uint32_t sysTickCounter = 0;
 
 void SysTick_Handler(void)
@@ -27,7 +29,10 @@ void systick_init(void)
 void delay_ms(uint32_t ms)
 {
     sysTickCounter = 0;
-    while (sysTickCounter < ms);
+    while (sysTickCounter < ms)
+    {
+        __WFI();
+    }
 }
 
 int main(void)
