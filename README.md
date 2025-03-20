@@ -46,5 +46,6 @@ make clean PROJECT=[project-name]
 
 - **blinky**: Forever blinking LED  
 - **blinky-with-interrupt**: Blinking an LED without a forever while loop, using interrupts
+- **uart**: Send a null terminated string over USART
 
 ---
