@@ -2,6 +2,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <string.h>
+#include <ctype.h>
 
 #define F_CPU           16000000UL
 #define BAUD            9600
@@ -113,6 +114,15 @@ static void print_led_status()
     }
 }
 
+// change the command to lower case
+static void to_lowercase()
+{
+    for (int i = 0; i < cmd_index; i++)
+    {
+        command_buffer[i] = tolower(command_buffer[i]);
+    }
+}
+
 // Process the command string and call the respective function
 static void process_command()
 {
@@ -121,15 +131,15 @@ static void process_command()
     usart_send_str("\nProcessing Command: ");
     usart_send_str(command_buffer);
 
-    if (strcmp(command_buffer, "LED ON") == 0)
+    if (strcmp(command_buffer, "led on") == 0)
     {
         toggle_led_on();
     } 
-    else if (strcmp(command_buffer, "LED OFF") == 0)
+    else if (strcmp(command_buffer, "led off") == 0)
     {
         toggle_led_off();
     }
-    else if (strcmp(command_buffer, "STATUS") == 0)
+    else if (strcmp(command_buffer, "status") == 0)
     {
         print_led_status();
     } 
