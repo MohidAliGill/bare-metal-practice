@@ -46,8 +46,9 @@ make clean PROJECT=[project-name]
 
 - **blinky**: Forever blinking LED  
 - **blinky-with-interrupt**: Blinking an LED without a forever while loop, using interrupts
+- **control-led-with-uart**: UART with circular buffer and command buffer, LED toggled with UART instructions
+- **led-brightness-with-pwm**: Controlling LED brightness with PWM timer
 - **uart**: Send a null terminated string over USART
 - **uart-with-buffer**: UART with circular buffer
-- **control-led-with-uart**: UART with circular buffer and command buffer, LED toggled with UART instructions
 
 ---
