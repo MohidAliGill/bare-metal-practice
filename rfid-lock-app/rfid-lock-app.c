@@ -1,15 +1,20 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define F_CPU       16000000UL
-#define BAUD_RATE   9600
-#define UBRR_VALUE  ((F_CPU / 16 / BAUD_RATE) - 1)
+#define F_CPU           16000000UL
+#define BAUD_RATE       9600
+#define UBRR_VALUE      ((F_CPU / 16 / BAUD_RATE) - 1)
+
+// MFRC Registers
+#define COMMAND_REG     0x01
+#define SOFT_RESET_CMD  0x0F
+#define TX_CONTROL_REG  0x14
 
 // SPI Pins
-#define SS_PIN      PB2
-#define MOSI_PIN    PB3
-#define MISO_PIN    PB4
-#define SCK_PIN     PB5
+#define SS_PIN          PB2
+#define MOSI_PIN        PB3
+#define MISO_PIN        PB4
+#define SCK_PIN         PB5
 
 // MFRC522 Registers
 #define VERSION_REG 0x37
@@ -72,6 +77,31 @@ static uint8_t mfrc522_read_register(uint8_t reg)
     return value;
 }
 
+static void mfrc522_write_register(uint8_t reg, uint8_t value)
+{
+    uint8_t address = (reg << 1) & 0x7E;
+
+    PORTB &= ~(1 << SS_PIN);
+    spi_transfer(address);
+    spi_transfer(value);
+    PORTB |= (1 << SS_PIN);
+}
+
+static void mfrc522_reset()
+{
+    mfrc522_write_register(COMMAND_REG, SOFT_RESET_CMD);
+    _delay_ms(50);  // Allow reset to complete
+}
+
+static void mfrc522_antenna_on()
+{
+    uint8_t value = mfrc522_read_register(TX_CONTROL_REG);
+    if (!(value & 0x03))
+    {
+        mfrc522_write_register(TX_CONTROL_REG, value | 0x03);
+    }
+}
+
 // ---------- MAIN ----------
 int main(void)
 {
@@ -79,18 +109,19 @@ int main(void)
     spi_init();
 
     _delay_ms(1000);
-    uart_send_str("Reading MFRC522 Version Register...\n");
+
+    uart_send_str("Initializing MFRC522...\n");
+
+    mfrc522_reset();
+    mfrc522_antenna_on();
 
     uint8_t version = mfrc522_read_register(VERSION_REG);
-
-    char hex[5];
+    char hex[4];
     hex[0] = "0123456789ABCDEF"[version >> 4];
     hex[1] = "0123456789ABCDEF"[version & 0x0F];
-    hex[2] = '\n';
-    hex[3] = '\0';
+    hex[2] = '\n'; hex[3] = '\0';
 
-    uart_send_str("VersionReg = 0x");
-    uart_send_str(hex);
+    uart_send_str("VersionReg = 0x"); uart_send_str(hex);
 
     while (1);
 }
