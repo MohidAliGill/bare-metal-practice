@@ -48,6 +48,7 @@ make clean PROJECT=[project-name]
 - **blinky-with-interrupt**: Blinking an LED without a forever while loop, using interrupts
 - **control-led-with-uart**: UART with circular buffer and command buffer, LED toggled with UART instructions
 - **led-brightness-with-pwm**: Controlling LED brightness with PWM timer
+- **rfid-lock-app**: Lock app that uses RFID tag as the key, more information in README inside the rfid-lock-app folder
 - **uart**: Send a null terminated string over USART
 - **uart-with-buffer**: UART with circular buffer
 
