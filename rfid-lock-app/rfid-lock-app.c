@@ -1,43 +1,10 @@
-#include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
+#include "rfid-lock-app.h"
 
 #define F_CPU               16000000UL
 #define BAUD_RATE           9600
 #define UBRR_VALUE          ((F_CPU / 16 / BAUD_RATE) - 1)
-
-// MFRC522 Register Addresses
-#define COMMAND_REG         0x01
-#define COM_IRQ_REG         0x04
-#define DIV_IRQ_REG         0x05
-#define ERROR_REG           0x06
-#define STATUS2_REG         0x08
-#define FIFO_DATA_REG       0x09
-#define FIFO_LEVEL_REG      0x0A
-#define CONTROL_REG         0x0C
-#define BIT_FRAMING_REG     0x0D
-#define MODE_REG            0x11
-#define TX_CONTROL_REG      0x14
-#define CRC_RESULT_H        0x21
-#define CRC_RESULT_L        0x22
-#define T_MODE_REG          0x2A
-#define T_PRESCALER_REG     0x2B
-#define T_RELOAD_H          0x2C
-#define T_RELOAD_L          0x2D
-#define VERSION_REG         0x37
-
-#define COMMAND_IDLE        0x00
-#define COMMAND_TRANSCEIVE  0x0C
-#define COMMAND_CALCCRC     0x03
-
-#define PICC_REQIDL         0x26
-#define PICC_ANTICOLL       0x93
-
-// SPI Pins
-#define SS_PIN              PB2
-#define MOSI_PIN            PB3
-#define MISO_PIN            PB4
-#define SCK_PIN             PB5
 
 // ---------- UART ----------
 static void uart_init() {
