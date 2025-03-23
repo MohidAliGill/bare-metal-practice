@@ -6,21 +6,32 @@
 #define BAUD_RATE           9600
 #define UBRR_VALUE          ((F_CPU / 16 / BAUD_RATE) - 1)
 
-// MFRC522 Registers
+// MFRC522 Register Addresses
 #define COMMAND_REG         0x01
-#define SOFT_RESET_CMD      0x0F
-#define TX_CONTROL_REG      0x14
+#define COM_IRQ_REG         0x04
+#define DIV_IRQ_REG         0x05
+#define ERROR_REG           0x06
+#define STATUS2_REG         0x08
 #define FIFO_DATA_REG       0x09
 #define FIFO_LEVEL_REG      0x0A
+#define CONTROL_REG         0x0C
 #define BIT_FRAMING_REG     0x0D
-#define COMM_IRQ_REG        0x04
-#define ERROR_REG           0x06
+#define MODE_REG            0x11
+#define TX_CONTROL_REG      0x14
+#define CRC_RESULT_H        0x21
+#define CRC_RESULT_L        0x22
+#define T_MODE_REG          0x2A
+#define T_PRESCALER_REG     0x2B
+#define T_RELOAD_H          0x2C
+#define T_RELOAD_L          0x2D
 #define VERSION_REG         0x37
-#define COMMAND_TRANSCEIVE  0x0C
+
 #define COMMAND_IDLE        0x00
+#define COMMAND_TRANSCEIVE  0x0C
+#define COMMAND_CALCCRC     0x03
+
 #define PICC_REQIDL         0x26
 #define PICC_ANTICOLL       0x93
-#define MAX_LEN             16
 
 // SPI Pins
 #define SS_PIN              PB2
@@ -79,7 +90,7 @@ static uint8_t mfrc522_read_register(uint8_t reg) {
 }
 
 static void mfrc522_reset() {
-    mfrc522_write_register(COMMAND_REG, SOFT_RESET_CMD);
+    mfrc522_write_register(COMMAND_REG, 0x0F);
     _delay_ms(50);
 }
 
@@ -90,55 +101,59 @@ static void mfrc522_antenna_on() {
     }
 }
 
-static uint8_t mfrc522_request(uint8_t req_mode, uint8_t *tag_type) {
+static void calculate_crc(uint8_t *data, uint8_t len, uint8_t *result) {
+    mfrc522_write_register(COMMAND_REG, COMMAND_IDLE);
+    mfrc522_write_register(DIV_IRQ_REG, 0x04);
+    mfrc522_write_register(FIFO_LEVEL_REG, 0x80);
+    for (uint8_t i = 0; i < len; i++)
+        mfrc522_write_register(FIFO_DATA_REG, data[i]);
+    mfrc522_write_register(COMMAND_REG, COMMAND_CALCCRC);
+    for (uint8_t i = 0; i < 0xFF; i++) {
+        if (mfrc522_read_register(DIV_IRQ_REG) & 0x04) break;
+        _delay_ms(1);
+    }
+    result[0] = mfrc522_read_register(CRC_RESULT_L);
+    result[1] = mfrc522_read_register(CRC_RESULT_H);
+}
+
+uint8_t mfrc522_request(uint8_t req_mode, uint8_t *tag_type) {
     mfrc522_write_register(COMMAND_REG, COMMAND_IDLE);
     mfrc522_write_register(FIFO_LEVEL_REG, 0x80);
+    mfrc522_write_register(BIT_FRAMING_REG, 0x07);
 
     mfrc522_write_register(FIFO_DATA_REG, req_mode);
-    mfrc522_write_register(BIT_FRAMING_REG, 0x07);
     mfrc522_write_register(COMMAND_REG, COMMAND_TRANSCEIVE);
 
-    uint8_t i = 255;
-    while (i--) {
-        uint8_t irq = mfrc522_read_register(COMM_IRQ_REG);
-        if (irq & 0x30) break;
+    for (uint8_t i = 0; i < 200; i++) {
+        if (mfrc522_read_register(COMM_IRQ_REG) & 0x30) break;
         _delay_ms(1);
     }
 
-    uint8_t err = mfrc522_read_register(ERROR_REG);
-    if (err & 0x1B) return 0;
-
-    uint8_t fifo_level = mfrc522_read_register(FIFO_LEVEL_REG);
-    if (fifo_level < 2) return 0;
+    if (mfrc522_read_register(ERROR_REG) & 0x1B) return 0;
 
     tag_type[0] = mfrc522_read_register(FIFO_DATA_REG);
     tag_type[1] = mfrc522_read_register(FIFO_DATA_REG);
-
     return 1;
 }
 
-static uint8_t mfrc522_anticoll(uint8_t *uid) {
+uint8_t mfrc522_anticoll(uint8_t *uid) {
     mfrc522_write_register(COMMAND_REG, COMMAND_IDLE);
     mfrc522_write_register(FIFO_LEVEL_REG, 0x80);
-
-    mfrc522_write_register(FIFO_DATA_REG, PICC_ANTICOLL);
-    mfrc522_write_register(FIFO_DATA_REG, 0x20); // NVB (Number of Valid Bits)
-    mfrc522_write_register(COMMAND_REG, COMMAND_TRANSCEIVE);
     mfrc522_write_register(BIT_FRAMING_REG, 0x00);
 
-    uint8_t i = 255;
-    while (i--) {
-        uint8_t irq = mfrc522_read_register(COMM_IRQ_REG);
-        if (irq & 0x30) break;
+    mfrc522_write_register(FIFO_DATA_REG, PICC_ANTICOLL);
+    mfrc522_write_register(FIFO_DATA_REG, 0x20);
+    mfrc522_write_register(COMMAND_REG, COMMAND_TRANSCEIVE);
+
+    for (uint8_t i = 0; i < 200; i++) {
+        if (mfrc522_read_register(COMM_IRQ_REG) & 0x30) break;
         _delay_ms(1);
     }
 
-    uint8_t err = mfrc522_read_register(ERROR_REG);
-    if (err & 0x1B) return 0;
+    if (mfrc522_read_register(ERROR_REG) & 0x1B) return 0;
 
-    for (uint8_t j = 0; j < 5; j++) {
-        uid[j] = mfrc522_read_register(FIFO_DATA_REG);
-    }
+    for (uint8_t i = 0; i < 5; i++)
+        uid[i] = mfrc522_read_register(FIFO_DATA_REG);
 
     return 1;
 }
@@ -147,17 +162,17 @@ static uint8_t mfrc522_anticoll(uint8_t *uid) {
 int main(void) {
     uart_init();
     spi_init();
-
     _delay_ms(1000);
-    uart_send_str("Initializing MFRC522...\n");
 
+    uart_send_str("Initializing MFRC522...\n");
     mfrc522_reset();
     mfrc522_antenna_on();
 
     uint8_t version = mfrc522_read_register(VERSION_REG);
-    char buffer[32];
-    sprintf(buffer, "VersionReg = 0x%02X\n", version);
-    uart_send_str(buffer);
+    char hex[6];
+    sprintf(hex, "0x%02X\n", version);
+    uart_send_str("VersionReg = ");
+    uart_send_str(hex);
 
     uint8_t tag_type[2];
     uint8_t uid[5];
@@ -165,15 +180,16 @@ int main(void) {
     while (1) {
         if (mfrc522_request(PICC_REQIDL, tag_type)) {
             uart_send_str("Card Detected!\n");
+
             if (mfrc522_anticoll(uid)) {
-                uart_send_str("Card UID: ");
+                uart_send_str("UID: ");
                 for (uint8_t i = 0; i < 5; i++) {
-                    sprintf(buffer, "%02X ", uid[i]);
-                    uart_send_str(buffer);
+                    sprintf(hex, "%02X", uid[i]);
+                    uart_send_str(hex);
                 }
                 uart_send_str("\n");
             }
-            _delay_ms(1000);
         }
+        _delay_ms(1000);
     }
 }
